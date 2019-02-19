@@ -1,0 +1,2 @@
+model_checkpoint_path: "lstm_2_layers"
+all_model_checkpoint_paths: "lstm_2_layers"
