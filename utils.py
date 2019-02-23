@@ -4,34 +4,73 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import pandas as pd
 from data_processing import MAXLIFE
+import time
+import datetime
+from matplotlib import pyplot as plt
+
 
 from tsfresh import select_features, extract_features
 from tsfresh.utilities.dataframe_functions import impute
 from itertools import chain
 
 class TsConf(object):
-    train_fids = [101]
-    test_fids = [201]
+    train_fids = [102]
+    test_fids = [202]
+    cmapss_url = "input/dataset.csv"
+    cmapss_n_clusters=6
+    ewm = 20
+    target = 'RUL'
+    timestamp = 'TIMECYCLE'
+
+    groupids = ['FILEID', 'ENGINEID']
+    norm_groupids = ['FILEID','CLUSTER']
+    opset = ["Alt", "Mach", "TRA"]
     sequence_length = 30
-    shift=1
-    batch_size=1
+    shift=30
+    batch_size=30
+    trim_left = True # trim left rows for each group to end exactly at the final of the group?
+    random = False # using random shuffle in batch generator?
+
     path_checkpoint = './save/save_lstm/lstm_2_layers'
-    input_url = "input/dataset.csv"
-    plot = False    
+    stateful = False # using stateful lstm?
     learning_rate = 2*10e-5  # 0.0001
     epochs = 1000
     ann_hidden = 16
     lstm_size = 48  # Number LSTM units
     num_layers = 2  # 2  # Number of layers
     alpha = 0 # regularization coef    
-    target = 'RUL'
-    groupids = ['FILEID', 'ENGINEID']
-    timestamp = 'TIMECYCLE'
+    restore_model = True #restore model when training
     
-    def __init__(self, columns):
+    plot = False    
+    
+    columns_old = ["ENGINEID", "TIMECYCLE", "Alt", "Mach", "TRA", "Total temp at fan in (T2)", "Total temp at LPC out (T24)", "Total temp at HPC out (T30)", "Total temp at LPT out (T50)", 
+    "Pres at fan in (P2)", "Total pres in bypass-duct (P15)", "Total pres at HPC out (P30)", "Physical fan speed (Nf)", 
+    "Physical core speed (Nc)", "Engine pres ratio (epr=P50/P2)", "Static pres at HPC out (Ps30)", "Ratio of fuel flow to Ps30 (phi)",
+    "Corrected fan speed (NRf)", "Corrected core speed (NRc)", "Bypass Ratio (BPR)", "Burner fuel-air ratio (farB)", 
+    "Bleed Enthalpy (htBleed)", "Demanded fan speed (Nf_dmd)", "Demanded corrected fan speed (PCNfR_dmd)", "HPT coolant bleed (W31)",
+    "LPT coolant bleed (W32)", "FILEID","RUL"]
+    columns_new = ["FILEID","ENGINEID", "TIMECYCLE", "Alt", "Mach", "TRA", "Total temp at fan in (T2)", "Total temp at LPC out (T24)", "Total temp at HPC out (T30)", "Total temp at LPT out (T50)", 
+    "Pres at fan in (P2)", "Total pres in bypass-duct (P15)", "Total pres at HPC out (P30)", "Physical fan speed (Nf)", 
+    "Physical core speed (Nc)", "Engine pres ratio (epr=P50/P2)", "Static pres at HPC out (Ps30)", "Ratio of fuel flow to Ps30 (phi)",
+    "Corrected fan speed (NRf)", "Corrected core speed (NRc)", "Bypass Ratio (BPR)", "Burner fuel-air ratio (farB)", 
+    "Bleed Enthalpy (htBleed)", "Demanded fan speed (Nf_dmd)", "Demanded corrected fan speed (PCNfR_dmd)", "HPT coolant bleed (W31)",
+    "LPT coolant bleed (W32)", "RUL"]
+    
+    select_feat = ["Total temp at LPC out (T24)", 
+               "Total temp at HPC out (T30)", 
+               "Total temp at LPT out (T50)", 
+               "Physical core speed (Nc)", 
+               "Static pres at HPC out (Ps30)", 
+               "Corrected core speed (NRc)", 
+               "Bypass Ratio (BPR)", 
+               "Bleed Enthalpy (htBleed)"]
+
+
+    
+    def __init__(self):
         """Set values of computed attributes."""
-        self.features = columns[~columns.isin(self.groupids+[self.timestamp]+[self.target])]
-        self.n_channels = len(self.features)
+        self.features = [x for x in self.columns_new if x not in (self.groupids+[self.timestamp]+[self.target]+self.opset)]        
+        self.n_channels = len(self.select_feat)
 
     def display(self):
         """Display Configuration values."""
@@ -41,144 +80,239 @@ class TsConf(object):
                 print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
 
-class TsSeries(pd.Series):
-    @property
-    def _constructor(self):
-        return TsSeries
-    @property
-    def _constructor_expanddim(self):
-        return TsDataFrame
 
-class TsDataFrame(pd.DataFrame):
-    """
-    Class for reshaping dataset to list of timeseries of (n_sequences, sequence_length, num_x_sensors): overlapping/non-overlapping; batch generation: random/sequential/ 
-    """
-    # normal properties
-    _metadata = ['target', 'groupids', 'timestamp']
-    
-    @property
-    def _constructor(self):
-        return TsDataFrame
 
-    @property
-    def _constructor_sliced(self):
-        return TsSeries
-    
-    #def featGet(self):
-        #return self.columns[~self.columns.isin(self.groupids+[self.timestamp]+[self.target])]
-    
-    #features = property(featGet)
-        
-    def extract_target(self):
-        #extract target
-        #print(self)        
-        X = self[self.columns[~self.columns.isin([self.target])]]
-        y = self[self.target] if self.target else None
-        return X, y
-    
-    def series_to_supervised(self, n_in=1, n_out=1, periods=5, dropnan=True):
+class TsLSTM():
+    """Class for training LSTM network.
+    """
+
+    def __init__(self, config):
         """
-        Frame a time series as a supervised learning dataset.
-        Arguments:
-            data: Sequence of observations as a list or NumPy array.
-            n_in: Number of lag observations as input (X).
-            n_out: Number of observations as output (y).
-            dropnan: Boolean whether or not to drop rows with NaN values.
-        Returns:
-            Pandas DataFrame of series framed for supervised learning.
+        mode: Either "training" or "inference"
+        config: A Sub-class of the Config class
+        model_dir: Directory to save training logs and trained weights
         """
-        n_vars = 1 if type(self) is list else self.shape[1]
-        df = pd.DataFrame(self)
-        cols, names = list(), list()
-        # input sequence (t-n, ... t-1)
-        for i in range(n_in//periods, 0, -1):
-            cols.append(df.shift(i*periods)-df)
-            names += [('var%d(t-%d)' % (j+1, i*periods)) for j in range(n_vars)]
-        # forecast sequence (t, t+1, ... t+n)
-        for i in range(0, n_out//periods):
-            cols.append(df.shift(-i*periods)-df)
-            if i == 0:
-                names += [('var%d(t)' % (j+1)) for j in range(n_vars)]
-            else:
-                names += [('var%d(t+%d)' % (j+1, i*periods)) for j in range(n_vars)]
-        # put it all together
-        agg = pd.concat(cols, axis=1)
-        agg.columns = names
-        # drop rows with NaN values
-        if dropnan:
-            agg.dropna(inplace=True)
-        return agg
-    
-    def add_lag_roll(self, feat_names, lag=1, step=1, roll=0):
-        x = series_to_supervised(self[feat_names], n_in=lag, n_out=1, periods=step)    
-        return pd.concat([df[lag:], x], axis=1)
-           
-    def tsfresh(self):
-        return self
-    
-    def lstm_sampling (self, timesteps=30, lag=1, random = False):        
-        # split into samples 
-        n = self.shape[0]
-        if n ==0:
-            return samples, targets
+        self.config = config
+        self.model_dir = config.path_checkpoint
+        #self.set_log_dir()
+        self.model = self._build_lstm(config=config)
+
+    def _build_lstm(self, config):
+        print ("Building LSTM...")
         
-        samples, targets = list(), list()        
-        X, y = self.extract_target()
-        for i in range(0, n-timesteps+1, lag):
-            sample = X[i:i+timesteps]
-            samples.append(sample)
-            if y is not None:
-                target = y[i:i+timesteps]
-                targets.append(target)
+        self.X = tf.placeholder(tf.float32, [None, config.sequence_length, config.n_channels], name='inputs')
+        self.Y = tf.placeholder(tf.float32, [None, config.sequence_length], name='labels')
+        keep_prob = tf.placeholder(tf.float32, name='keep_prob')
+        learning_rate_ = tf.placeholder(tf.float32, name='learning_rate')
         
-        #print("Samples length: ",len(samples),", Targets length: ",len(targets))
+        is_train = tf.placeholder(dtype=tf.bool, shape=None, name="is_train")
+
+        input_layer = self.X
+
+        shape = input_layer.get_shape().as_list()
+        print('My Conv Shape:',shape)
+        input_flat = tf.reshape(input_layer, [-1, shape[1] * shape[2]])
+
+        dence_layer_1 = dense_layer(input_flat, size=config.sequence_length * config.n_channels, 
+                                    activation_fn=tf.nn.relu, batch_norm=False,
+                                    phase=is_train, drop_out=True, keep_prob=keep_prob,
+                                    scope="fc_1")
+        lstm_input = tf.reshape(dence_layer_1, [-1, config.sequence_length, config.n_channels])
+
+        cell = get_RNNCell(['LSTM'] * config.num_layers, keep_prob=keep_prob, state_size=config.lstm_size)
+        init_states = cell.zero_state(config.batch_size, tf.float32)
+
+        # For each layer, get the initial state. states will be a tuple of LSTMStateTuples.
+        states = get_state_variables(config.batch_size, cell)
+
+        # Unroll the LSTM
+        rnn_output, new_states = tf.nn.dynamic_rnn(cell, lstm_input, dtype=tf.float32, initial_state=states)
+
+        # Add an operation to update the train states with the last state tensors.
+        self.update_op = get_state_update_op(states, new_states) if config.stateful else get_state_update_op(states, init_states)
+        self.reset_op = get_state_update_op(states, init_states)
+
+        stacked_rnn_output = tf.reshape(rnn_output, [-1, config.lstm_size])  # change the form into a tensor
+
+        dence_layer_2 = dense_layer(stacked_rnn_output, size=config.ann_hidden, activation_fn=tf.nn.relu, batch_norm=False,
+                                    phase=is_train, drop_out=True, keep_prob=keep_prob,
+                                    scope="fc_2")
+
+        dence_layer_3 = dense_layer(dence_layer_2, size=config.ann_hidden, activation_fn=tf.nn.relu, batch_norm=False,
+                                    phase=is_train, drop_out=True, keep_prob=keep_prob,
+                                    scope="fc_2_2")
+
+        self.output = dense_layer(dence_layer_3, size=1, activation_fn=None, batch_norm=False, phase=is_train, drop_out=False,
+                             keep_prob=keep_prob,
+                             scope="fc_3_output")
+
+        prediction = tf.reshape(self.output, [-1])
+        y_flat = tf.reshape(self.Y, [-1])
+
+        self.h = prediction - y_flat
+
+        tv = tf.trainable_variables()
+        regularization_cost = tf.reduce_sum([ tf.nn.l2_loss(v) for v in tv ])
+
+        cost_function = tf.reduce_sum(tf.square(self.h)) + config.alpha*regularization_cost
+        RMSE = tf.sqrt(tf.reduce_mean(tf.square(self.h)))
+        self.optimizer = tf.train.AdamOptimizer(learning_rate_).minimize(cost_function)
+        self.keep_prob = keep_prob
+        self.learning_rate_ = learning_rate_ 
         
-        # convert list of arrays into 2d array
-        if samples:
-            data = np.stack(samples)
-        else:
-            data = None
-        if targets:
-            y = np.stack(targets)
+        
+    def train(self, train, test, config):
+        
+        with tf.Session() as session:
             
-        return data, y
+            saver = tf.train.Saver()
+            
+            keep_prob = self.keep_prob
+            learning_rate_ = self.learning_rate_ 
 
-    def batch_generator(self, sequence_length=30, online_shift=1, batch_size=1,  online=True):
-        """
-        Generator function for creating sequential batches of training-data
-        """
-        x_train, y_train = self.lstm_sampling(sequence_length, online_shift, batch_size)
+            model_summary(learning_rate=config.learning_rate, batch_size=config.batch_size, lstm_layers=config.num_layers, 
+                          lstm_layer_size=config.lstm_size, fc_layer_size=config.ann_hidden, sequence_length=config.sequence_length, 
+                          n_channels=config.n_channels, path_checkpoint=config.path_checkpoint, spacial_note='')
+
+
+            tf.global_variables_initializer().run()
+
+            if config.restore_model:
+                saver.restore(session, config.path_checkpoint)
+                print("Model restored from file: %s" % config.path_checkpoint)
+
+            cost = []
+            plot_x = []
+            plot_y1 = []
+            plot_y2 = []
+            iter_train = int(train.shape[0]/config.shift)
+            iter_test = int(test.shape[0]/config.shift)
+            print("Training set MSE")
+            print("No epoches: ", config.epochs, "No itr: ", iter_train)
+            __start = time.time()
+            for ep in range(config.epochs):
+                session.run(self.reset_op)
+                training_generator = train.batch_generator(config)
+                testing_generator = test.batch_generator(config)
+
+                h1 = []
+                t1 = []
+                engine_id = 1
+
+                try:
+                    old_engine_id = 0
+                    while True:
+                        ## training ##
+                        train_gen = next(training_generator)
+                        new_engine_id = train_gen[0][0,0,1]
+                        if (old_engine_id != new_engine_id) :
+                            session.run(self.reset_op)
+                            #if (old_engine_id != 0):
+                                #print ("eng_ids: ",old_engine_id, new_engine_id, "  RMSE train:", np.sqrt(np.mean(np.square(h1))))
+                            old_engine_id = new_engine_id
+                        batch_x, batch_y = train_gen[1], train_gen[2]                   
+                        session.run([self.optimizer, self.update_op],
+                                    feed_dict={self.X: batch_x, self.Y: batch_y, keep_prob: 0.7, learning_rate_: config.learning_rate})
+                        h_i = self.h.eval(feed_dict={self.X: batch_x, self.Y: batch_y, 
+                                                     keep_prob: 1.0, learning_rate_: config.learning_rate})
+                        cost.append(np.square(h_i))
+                        h1.append(h_i)
+                except StopIteration:
+                    pass
+
+                rmse_train = np.sqrt(np.mean(np.square(h1)))
+
+                y_pred = []
+
+                try:
+                    old_engine_id = 0
+                    while True:
+                        test_gen = next(testing_generator)
+                        new_engine_id = test_gen[0][0,0,1]
+                        if old_engine_id != new_engine_id:
+                            session.run(self.reset_op)
+                            #if (old_engine_id != 0):
+                                #print ("eng_ids: ",old_engine_id, new_engine_id, "  RMSE train:", np.sqrt(np.mean(np.square(t1))))
+                            old_engine_id = new_engine_id
+                        x_test_batch, y_test_batch = test_gen[1], test_gen[2]
+                        h_i, u = session.run([self.h, self.update_op], feed_dict={self.X: x_test_batch, self.Y: y_test_batch, 
+                                                                                  keep_prob: 1.0, learning_rate_: config.learning_rate})
+                        t1.append(h_i)
+                except StopIteration:
+                    pass
+
+                rmse_test = np.sqrt(np.mean(np.square(t1)))
+
+                plot_x.append(ep)
+                plot_y1.append(rmse_train)
+                plot_y2.append(rmse_test)
+
+                time_per_ep = (time.time() - __start)
+                time_remaining = ((config.epochs - ep) * time_per_ep) / 3600
+                print("LSTM", "epoch:", ep, "RMSE-train:", rmse_train, "RMSE-test", rmse_test, "lr", config.learning_rate,
+                      "\ttime/epoch:", round(time_per_ep, 2), "\ttime_remaining: ",
+                      int(time_remaining), " hr:", round((time_remaining % 1) * 60, 1), " min", "\ttime_stamp: ",
+                      datetime.datetime.now().strftime("%Y.%m.%d-%H:%M:%S"))
+                __start = time.time()
+
+                if ep % 20 == 0 and ep != 0:
+                    save_path = saver.save(session, config.path_checkpoint)
+                    if os.path.exists(config.path_checkpoint + '.meta'):
+                        print("Model saved to file: %s" % config.path_checkpoint)
+                    else:
+                        print("NOT SAVED!!!", config.path_checkpoint)
+                        plt.plot(plot_x, plot_y1, 'bo', plot_x, plot_y2, 'go')
+                        plt.show()
+
+                if ep % 100 == 0 and ep != 0: 
+                    config.learning_rate = config.learning_rate / 2
+                    
+
+                #plt.plot(plot_x, plot_y1, 'bo', plot_x, plot_y2, 'go')
+                #plt.show()
+
+    def predict(self, predict, config):   
+   
+        with tf.Session() as session:
+            
+            keep_prob = self.keep_prob
+            saver = tf.train.Saver()
+            saver.restore(session, config.path_checkpoint)
+            print("Model restored from file: %s" % config.path_checkpoint)
+
+            print("Prediction for submit...")
+            x_predict = predict
+
+            full_prediction = []
+
+            print("#of validation points:", x_predict.shape[0], "#datapoints covers from minibatch:",
+                  config.batch_size * config.sequence_length)
+
+            predict_generator = x_predict.batch_generator(config)
+
+            try:
+                old_engine_id = 0                
+                while True:
+                    test_gen = next(predict_generator)                    
+                    new_engine_id = test_gen[0][0,0,1]
+                    if old_engine_id != new_engine_id:
+                        session.run(self.reset_op)
+                        old_engine_id = new_engine_id
+                    x_validate_batch, y_validate_batch = test_gen[1], test_gen[2]
+                    __y_pred, u = session.run([self.output, self.update_op], feed_dict={self.X: x_validate_batch, self.Y: y_validate_batch, 
+                                                                                        keep_prob: 1.0})
+                    
+                    full_prediction.append(__y_pred[0])
+            except StopIteration:
+                pass        
+
+            full_prediction = np.array(full_prediction)
+            full_prediction = full_prediction.ravel()
         
-        num_x_sensors = x_train.shape[2]
-        num_train = x_train.shape[0]
-        idx = 0
+        return full_prediction
 
-        while idx <= num_train - batch_size:
-
-            # Allocate a new array for the batch of input-signals.
-            x_shape = (batch_size, sequence_length, num_x_sensors)
-            x_batch = np.zeros(shape=x_shape, dtype=np.float32)
-            # Allocate a new array for the batch of output-signals.
-            y_shape = (batch_size, sequence_length)
-            y_batch = np.zeros(shape=y_shape, dtype=np.float32)
-            # Fill the batch with random sequences of data.
-            for i in range(batch_size):
-                x_batch[i] = x_train[idx+i]
-                y_batch[i] = y_train[idx+i]
-
-            if online:
-                idx = idx + online_shift  # check if its nee to be idx=idx+1
-            #print("num_train %s, idx %s, x_batch.shape %s" % (num_train, idx, x_batch.shape))
-            yield (x_batch[:,:,0:3], x_batch[:,:,3:], y_batch)
-        
-    def endless_batch(self, timesteps=30, lag=1, batch_size=1,  online=True):
-        feats_target = self.columns[~self.columns.isin(self.groupids+[self.timestamp])]
-        gen = iter(())
-        for name, group in self.groupby(self.groupids):
-            gen = chain(gen, group.batch_generator(timesteps, lag, batch_size))
-        return(gen)            
-
-
+    
+    
 def dense_layer(x, size,activation_fn, batch_norm = False,phase=False, drop_out=False, keep_prob=None, scope="fc_layer"):
     """
     Helper function to create a fully connected layer with or without batch normalization or dropout regularization

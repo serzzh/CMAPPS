@@ -5,22 +5,22 @@
 
 ---------
 learning_rate:  0.0002
-batch_size:  1
+batch_size:  30
 lstm_layers:  2
 lstm_layer_size:  48
 fc_layer_size:  16 
 
 sequence_length:  30
-n_channels:  7
+n_channels:  8
 --------- 
 
 ---------
 Variables: name (type shape) [size]
 --------- 
 
-fc_1/dense/kernel:0 (float32_ref 210x210) [44100, bytes: 176400]
-fc_1/dense/bias:0 (float32_ref 210) [210, bytes: 840]
-rnn/multi_rnn_cell/cell_0/lstm_cell/kernel:0 (float32_ref 55x192) [10560, bytes: 42240]
+fc_1/dense/kernel:0 (float32_ref 240x240) [57600, bytes: 230400]
+fc_1/dense/bias:0 (float32_ref 240) [240, bytes: 960]
+rnn/multi_rnn_cell/cell_0/lstm_cell/kernel:0 (float32_ref 56x192) [10752, bytes: 43008]
 rnn/multi_rnn_cell/cell_0/lstm_cell/bias:0 (float32_ref 192) [192, bytes: 768]
 rnn/multi_rnn_cell/cell_0/lstm_cell/w_f_diag:0 (float32_ref 48) [48, bytes: 192]
 rnn/multi_rnn_cell/cell_0/lstm_cell/w_i_diag:0 (float32_ref 48) [48, bytes: 192]
@@ -37,5 +37,5 @@ fc_2_2/dense/bias:0 (float32_ref 16) [16, bytes: 64]
 fc_3_output/dense/kernel:0 (float32_ref 16x1) [16, bytes: 64]
 fc_3_output/dense/bias:0 (float32_ref 1) [1, bytes: 4]
 
-Total size of variables: 75047
-Total bytes of variables: 300188
+Total size of variables: 88769
+Total bytes of variables: 355076
