@@ -255,7 +255,7 @@ class TsLSTM():
                       datetime.datetime.now().strftime("%Y.%m.%d-%H:%M:%S"))
                 __start = time.time()
 
-                if ep % 20 == 0 and ep != 0:
+                if ep % 1 == 0 and ep != 0:
                     save_path = saver.save(session, config.path_checkpoint)
                     if os.path.exists(config.path_checkpoint + '.meta'):
                         print("Model saved to file: %s" % config.path_checkpoint)
@@ -378,26 +378,6 @@ def get_RNNCell(cell_types, keep_prob, state_size, build_with_dropout=True):
         cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=keep_prob)
 
     return cell
-
-
-class BatchNorm(object):
-    """
-    usage : dence_layer_bn = BatchNorm(name="batch_norm_" + scope)(previous_layer, train=is_train)
-    """
-    def __init__(self, epsilon=1e-5, momentum=0.999, name="batch_norm"):
-        with tf.variable_scope(name):
-            self.epsilon = epsilon
-            self.momentum = momentum
-            self.name = name
-
-    def __call__(self, x, train=True):
-        return tf.contrib.layers.batch_norm(x,
-                                            decay=self.momentum,
-                                            updates_collections=None,
-                                            epsilon=self.epsilon,
-                                            scale=True,
-                                            is_training=train,
-                                            scope=self.name)
 
 
 def model_summary(learning_rate,batch_size,lstm_layers,lstm_layer_size,fc_layer_size,sequence_length,n_channels,path_checkpoint,spacial_note=''):

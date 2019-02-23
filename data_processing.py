@@ -111,7 +111,7 @@ class TsDataFrame(pd.DataFrame):
                     target = y[i:i+timesteps]
                     targets.append(target)
         
-        print("Samples length: ",len(samples),", Targets length: ",len(targets))
+        #print("Samples length: ",len(samples),", Targets length: ",len(targets))
         
         # convert list of arrays into 2d array
         if samples:
