@@ -31,7 +31,7 @@ class TsConf(object):
     trim_left = True # trim left rows for each group to end exactly at the final of the group?
     random = False # using random shuffle in batch generator?
 
-    path_checkpoint = './save/save_lstm/lstm_2_layers'
+    path_checkpoint = './save/new_lstm/default'
     stateful = False # using stateful lstm?
     learning_rate = 2*10e-5  # 0.0001
     epochs = 1000
@@ -40,7 +40,7 @@ class TsConf(object):
     num_layers = 2  # 2  # Number of layers
     alpha = 0 # regularization coef    
     restore_model = True #restore model when training
-    
+    save_model = False
     plot = False    
     
     columns_old = ["ENGINEID", "TIMECYCLE", "Alt", "Mach", "TRA", "Total temp at fan in (T2)", "Total temp at LPC out (T24)", "Total temp at HPC out (T30)", "Total temp at LPT out (T50)", 
@@ -64,14 +64,22 @@ class TsConf(object):
                "Corrected core speed (NRc)", 
                "Bypass Ratio (BPR)", 
                "Bleed Enthalpy (htBleed)"]
+    
+    def getChannels(self):
+        return len(self.select_feat)
 
+    n_channels = property(getChannels)
+    
+    def getPathCh(self):
+        return './save/new_lstm/'+'cha_'+str(self.n_channels)+'_len_'+str(self.sequence_length) \
+                +'_bat_'+str(self.batch_size) +'/lstm_'+str(self.num_layers)+'_layers_stateful_'+str(self.stateful)
 
+    path_checkpoint = property(getPathCh)    
     
     def __init__(self):
         """Set values of computed attributes."""
         self.features = [x for x in self.columns_new if x not in (self.groupids+[self.timestamp]+[self.target]+self.opset)]        
-        self.n_channels = len(self.select_feat)
-
+    
     def display(self):
         """Display Configuration values."""
         print("\nConfigurations:")
@@ -207,8 +215,8 @@ class TsLSTM():
                         new_engine_id = train_gen[0][0,0,1]
                         if (old_engine_id != new_engine_id) :
                             session.run(self.reset_op)
-                            #if (old_engine_id != 0):
-                                #print ("eng_ids: ",old_engine_id, new_engine_id, "  RMSE train:", np.sqrt(np.mean(np.square(h1))))
+                            if (old_engine_id != 0):
+                                print ("eng_ids: ",old_engine_id, new_engine_id, "  RMSE train:", np.sqrt(np.mean(np.square(h1))))
                             old_engine_id = new_engine_id
                         batch_x, batch_y = train_gen[1], train_gen[2]                   
                         session.run([self.optimizer, self.update_op],
@@ -255,7 +263,7 @@ class TsLSTM():
                       datetime.datetime.now().strftime("%Y.%m.%d-%H:%M:%S"))
                 __start = time.time()
 
-                if ep % 1 == 0 and ep != 0:
+                if ep % 1 == 0 and config.save_model:
                     save_path = saver.save(session, config.path_checkpoint)
                     if os.path.exists(config.path_checkpoint + '.meta'):
                         print("Model saved to file: %s" % config.path_checkpoint)

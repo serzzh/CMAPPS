@@ -102,7 +102,7 @@ class TsDataFrame(pd.DataFrame):
 
             X, y = group.extract_target()
             
-            start = n % timesteps if config.trim_left else 0
+            start = n % lag if config.trim_left else 0
             
             for i in range(start, n-timesteps+1, lag):
                 sample = X[i:i+timesteps]
@@ -111,7 +111,8 @@ class TsDataFrame(pd.DataFrame):
                     target = y[i:i+timesteps]
                     targets.append(target)
         
-        #print("Samples length: ",len(samples),", Targets length: ",len(targets))
+        print("name: %s, n: %s, start: %s, finish: %s, Samples length: %s , Targets length %s: " % 
+              (name, n, start, n-timesteps+1, len(samples),len(targets)))
         
         # convert list of arrays into 2d array
         if samples:
