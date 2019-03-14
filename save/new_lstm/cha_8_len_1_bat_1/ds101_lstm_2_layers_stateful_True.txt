@@ -1,0 +1,41 @@
+---------
+./save/new_lstm/cha_8_len_1_bat_1/ds101_lstm_2_layers_stateful_True.txt
+
+--------- 
+
+---------
+learning_rate:  0.0002
+batch_size:  1
+lstm_layers:  2
+lstm_layer_size:  48
+fc_layer_size:  16 
+
+sequence_length:  1
+n_channels:  8
+--------- 
+
+---------
+Variables: name (type shape) [size]
+--------- 
+
+fc_1/dense/kernel:0 (float32_ref 8x8) [64, bytes: 256]
+fc_1/dense/bias:0 (float32_ref 8) [8, bytes: 32]
+rnn/multi_rnn_cell/cell_0/lstm_cell/kernel:0 (float32_ref 56x192) [10752, bytes: 43008]
+rnn/multi_rnn_cell/cell_0/lstm_cell/bias:0 (float32_ref 192) [192, bytes: 768]
+rnn/multi_rnn_cell/cell_0/lstm_cell/w_f_diag:0 (float32_ref 48) [48, bytes: 192]
+rnn/multi_rnn_cell/cell_0/lstm_cell/w_i_diag:0 (float32_ref 48) [48, bytes: 192]
+rnn/multi_rnn_cell/cell_0/lstm_cell/w_o_diag:0 (float32_ref 48) [48, bytes: 192]
+rnn/multi_rnn_cell/cell_1/lstm_cell/kernel:0 (float32_ref 96x192) [18432, bytes: 73728]
+rnn/multi_rnn_cell/cell_1/lstm_cell/bias:0 (float32_ref 192) [192, bytes: 768]
+rnn/multi_rnn_cell/cell_1/lstm_cell/w_f_diag:0 (float32_ref 48) [48, bytes: 192]
+rnn/multi_rnn_cell/cell_1/lstm_cell/w_i_diag:0 (float32_ref 48) [48, bytes: 192]
+rnn/multi_rnn_cell/cell_1/lstm_cell/w_o_diag:0 (float32_ref 48) [48, bytes: 192]
+fc_2/dense/kernel:0 (float32_ref 48x16) [768, bytes: 3072]
+fc_2/dense/bias:0 (float32_ref 16) [16, bytes: 64]
+fc_2_2/dense/kernel:0 (float32_ref 16x16) [256, bytes: 1024]
+fc_2_2/dense/bias:0 (float32_ref 16) [16, bytes: 64]
+fc_3_output/dense/kernel:0 (float32_ref 16x1) [16, bytes: 64]
+fc_3_output/dense/bias:0 (float32_ref 1) [1, bytes: 4]
+
+Total size of variables: 31001
+Total bytes of variables: 124004
