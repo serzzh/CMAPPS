@@ -72,7 +72,8 @@ class TsConf(object):
     
     def getPathCh(self):
         return './save/new_lstm/'+'cha_'+str(self.n_channels)+'_len_'+str(self.sequence_length) \
-                +'_bat_'+str(self.batch_size) +'/lstm_'+str(self.num_layers)+'_layers_stateful_'+str(self.stateful)
+                +'_bat_'+str(self.batch_size) +'/ds'+str(self.train_fids[0])+'_lstm_'+str(self.num_layers) \
+                +'_layers_stateful_'+str(self.stateful)
 
     path_checkpoint = property(getPathCh)    
     
