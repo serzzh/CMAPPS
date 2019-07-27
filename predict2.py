@@ -11,10 +11,10 @@ conn = psycopg2.connect(dbname='elevator', user='elevator',
 cursor = conn.cursor()
 
 cursor.execute('SELECT * FROM PUBLIC.ELEVATOR')
-records = cursor.fetchall()
+records = pd.DataFrame(cursor.fetchall())
 ...
 cursor.close()
 conn.close()
 
-print(type(records[1]))
-print(records[1])
+print(type(records))
+print(records[1,])
