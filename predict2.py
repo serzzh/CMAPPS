@@ -21,3 +21,4 @@ df = pd.DataFrame(records)
 
 print(type(df))
 print(df.iloc[1,])
+print(config.columns_new,'/n', config.columns_old)
