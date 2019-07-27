@@ -19,6 +19,15 @@ conn.close()
 
 df = pd.DataFrame(records)
 
+config.columns_old = ['FILEID', 'ENGINEID', 'TIMECYCLE', 
+                      'Alt', 'Mach', 'TRA', 
+                      'Total temp at LPC out (T24)', 'Total temp at HPC out (T30)', 
+                      'Total temp at LPT out (T50)', 'Physical core speed (Nc)', 
+                      'Static pres at HPC out (Ps30)', 'Corrected core speed (NRc)', 
+                      'Bypass Ratio (BPR)', 'Bleed Enthalpy (htBleed)', 'RUL', 'CLUSTER']
+
+df.columns = config.columns_old
+
 print(type(df))
 print(df.iloc[1,])
 print(config.columns_new,'/n', config.columns_old)
