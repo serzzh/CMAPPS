@@ -20,4 +20,4 @@ conn.close()
 df = pd.DataFrame(records)
 
 print(type(df))
-print(df[1])
+print(df.iloc[1,])
