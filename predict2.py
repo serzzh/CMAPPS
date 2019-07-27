@@ -16,5 +16,5 @@ records = cursor.fetchall()
 cursor.close()
 conn.close()
 
-print(type(records))
-print(records)
+print(type(records[1]))
+print(records[1])
