@@ -1,6 +1,7 @@
 from model import *
 from config import *
 from data_processing import *
+import pandas as pd
 today = datetime.date.today()
 
 config = TsConf()
@@ -11,10 +12,12 @@ conn = psycopg2.connect(dbname='elevator', user='elevator',
 cursor = conn.cursor()
 
 cursor.execute('SELECT * FROM PUBLIC.ELEVATOR')
-records = pd.DataFrame(cursor.fetchall())
+records = cursor.fetchall()
 ...
 cursor.close()
 conn.close()
 
-print(type(records))
-print(records[1,])
+df = pd.DataFrame(records)
+
+print(type(df))
+print(df[1,])
