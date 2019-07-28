@@ -13,9 +13,7 @@ cursor = conn.cursor()
 
 cursor.execute('SELECT * FROM PUBLIC.PARAMETERS')
 records = cursor.fetchall()
-...
-cursor.close()
-conn.close()
+
 
 df = pd.DataFrame(records)
 
@@ -76,3 +74,20 @@ if Predict:
 print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
 
 print(z.tail(), dtrain.tail())
+
+
+try:
+    postgres_insert_query = """ INSERT INTO RUL (RUL2) VALUES (%i)"""
+    record_to_insert = (z["pred"])
+    cursor.execute(postgres_insert_query, record_to_insert)
+    connection.commit()
+    count = cursor.rowcount
+    print (count, "Record inserted successfully into mobile table")
+except (Exception, psycopg2.Error) as error :
+    if(connection):
+        print("Failed to insert record into mobile table", error)
+
+
+...
+cursor.close()
+conn.close()
