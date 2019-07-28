@@ -82,13 +82,13 @@ if Predict:
 
 try:
     postgres_insert_query = """UPDATE RUL SET RUL2 = %f WHERE FILEID = %i AND EQUID = %i AND  TIMECYCLE = %i"""
-    for i in range(len(dtrain)):
+    for i in range(len(dtrain["RUL"])):
         record_to_insert = (dtrain["RUL"].iloc[i], int(dtrain["FILEID"].iloc[i]), int(dtrain["ENGINEID"].iloc[i]), int(dtrain["TIMECYCLE"].iloc[i]))
         #print(postgres_insert_query % record_to_insert)
         cursor.execute(postgres_insert_query % record_to_insert)
-    conn.commit()
-    count = cursor.rowcount
-    print (count, "Record inserted successfully into mobile table")
+        conn.commit()
+        count = cursor.rowcount
+        print (count, "Record inserted successfully into mobile table")
 except (Exception, psycopg2.Error) as error :
     if(conn):
         print("Failed to insert record into mobile table", error)
