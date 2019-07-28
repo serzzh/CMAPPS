@@ -83,8 +83,7 @@ try:
     postgres_insert_query = """UPDATE RUL SET RUL2 = %i WHERE FILEID = %i AND ENGINEID = %i AND  TIMECYCLE = %i"""
     for i in range(len(z)):
         record_to_insert = (z["pred"][i], z["FILEID"][i], z["ENGINEID"][i], z["TIMECYCLE"][i])
-        if i == 3:
-            print(postgres_insert_query % record_to_insert)
+        print(postgres_insert_query % record_to_insert)
         cursor.execute(postgres_insert_query % record_to_insert)
     conn.commit()
     count = cursor.rowcount
