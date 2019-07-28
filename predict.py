@@ -71,9 +71,8 @@ if Predict:
     dtrain = train #.loc[train.ENGINEID<9]
     y_target = dtrain["RUL"]
     y_pred = m.predict(dtrain, config)
-    z=pd.DataFrame(dict(target=y_target, pred=y_pred)).reset_index()
-    print(z.head())
-    z = pd.concat([dtrain[["FILEID", "ENGINEID", "TIMECYCLE"]], z], axis=1)
+    #z=pd.DataFrame(dict(target=y_target, pred=y_pred)).reset_index()
+    dtrain["RUL"] = y_pred
     #plt.plot(z[["target", "pred"]])
 
 print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
@@ -84,7 +83,7 @@ print(z.tail(), dtrain.tail())
 #try:
 postgres_insert_query = """UPDATE RUL SET RUL2 = %f WHERE FILEID = %i AND ENGINEID = %i AND  TIMECYCLE = %i"""
 for i in range(len(z)):
-    record_to_insert = (z["pred"].iloc[i], int(z["FILEID"].iloc[i]), int(z["ENGINEID"].iloc[i]), int(z["TIMECYCLE"].iloc[i]))
+    record_to_insert = (z["RUL"].iloc[i], int(z["FILEID"].iloc[i]), int(z["ENGINEID"].iloc[i]), int(z["TIMECYCLE"].iloc[i]))
     print(postgres_insert_query % record_to_insert)
         #cursor.execute(postgres_insert_query % record_to_insert)
     #conn.commit()
