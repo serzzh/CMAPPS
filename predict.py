@@ -88,7 +88,7 @@ try:
         cursor.execute(postgres_insert_query % record_to_insert)
         conn.commit()
         count = cursor.rowcount
-        print (count, "Record inserted successfully into mobile table")
+        print (int(dtrain["ENGINEID"].iloc[i]), "Record inserted successfully into mobile table")
 except (Exception, psycopg2.Error) as error :
     if(conn):
         print("Failed to insert record into mobile table", error)
