@@ -26,6 +26,8 @@ config.columns_old = ['FILEID', 'ENGINEID', 'TIMECYCLE',
 
 df.columns = config.columns_old
 
+df = df.sort_values(by=['FILEID', 'ENGINEID', 'TIMECYCLE'])
+
 df = TsDataFrame(df)
 
 train = df[(["FILEID","ENGINEID", "TIMECYCLE"]+config.select_feat+["RUL"])][df.FILEID.isin(config.train_fids)]
