@@ -83,7 +83,7 @@ print(z.tail(), dtrain.tail())
 #try:
 postgres_insert_query = """UPDATE RUL SET RUL2 = %f WHERE FILEID = %i AND ENGINEID = %i AND  TIMECYCLE = %i"""
 for i in range(len(z)):
-    record_to_insert = (z["RUL"].iloc[i], int(z["FILEID"].iloc[i]), int(z["ENGINEID"].iloc[i]), int(z["TIMECYCLE"].iloc[i]))
+    record_to_insert = (dtrain["RUL"].iloc[i], int(dtrain["FILEID"].iloc[i]), int(dtrain["ENGINEID"].iloc[i]), int(dtrain["TIMECYCLE"].iloc[i]))
     print(postgres_insert_query % record_to_insert)
         #cursor.execute(postgres_insert_query % record_to_insert)
     #conn.commit()
