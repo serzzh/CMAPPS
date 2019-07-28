@@ -70,9 +70,9 @@ if Train:
 if Predict:
     dtrain = train #.loc[train.ENGINEID<9]
     y_target = dtrain["RUL"]
-    y_pred = m.predict(dtrain, config)
+    #y_pred = m.predict(dtrain, config)
     #z=pd.DataFrame(dict(target=y_target, pred=y_pred)).reset_index()
-    dtrain["RUL"] = y_pred
+    dtrain["RUL"] = y_target
     #plt.plot(z[["target", "pred"]])
 
 #print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
