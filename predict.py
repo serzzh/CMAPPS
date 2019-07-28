@@ -71,6 +71,7 @@ if Predict:
     y_target = dtrain["RUL"]
     y_pred = m.predict(dtrain, config)
     z=pd.DataFrame(dict(target=y_target, pred=y_pred)).reset_index()
+    z = pd.concat([dtrain[["FILEID", "ENGINEID", "TIMECYCLE"]], z], axis=1)
     #plt.plot(z[["target", "pred"]])
 
 print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
@@ -79,10 +80,12 @@ print(z.tail(), dtrain.tail())
 
 
 try:
-    postgres_insert_query = """ INSERT INTO RUL (RUL2) VALUES (%f)"""
+    postgres_insert_query = """UPDATE RUL SET RUL2 = %f WHERE FILEID = %i AND ENGINEID = %i AND  TIMECYCLE = %i"""
     for i in range(len(z)):
-        record_to_insert = (z["pred"][i])
-        cursor.execute(postgres_insert_query, record_to_insert)
+        record_to_insert = (z["pred"][i], z["FILEID"][i], z["ENGINEID"][i], z["TIMECYCLE"][i])
+        if i == 3:
+            print(postgres_insert_query % record_to_insert)
+        cursor.execute(postgres_insert_query % record_to_insert)
     conn.commit()
     count = cursor.rowcount
     print (count, "Record inserted successfully into mobile table")
