@@ -56,7 +56,7 @@ config.save_model = True
 config.random = False
 config.stateful = True
 config.train_fids = [102]
-config.test_fids = [202]
+config.test_fids = [102]
 
 config.display()
 
