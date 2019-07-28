@@ -73,6 +73,6 @@ if Predict:
     z=pd.DataFrame(dict(target=y_target, pred=y_pred)).reset_index()
     #plt.plot(z[["target", "pred"]])
 
-print ("df len %, predict len %" % (len(df[df.FILEID==102]), len(z)))
+print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
 
 print(z.tail())
