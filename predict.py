@@ -77,14 +77,14 @@ print(z.tail(), dtrain.tail())
 
 
 try:
-    postgres_insert_query = """ INSERT INTO RUL (RUL2) VALUES (%i)"""
+    postgres_insert_query = """ INSERT INTO RUL (RUL2) VALUES (%f)"""
     record_to_insert = (z["pred"])
     cursor.execute(postgres_insert_query, record_to_insert)
     conn.commit()
     count = cursor.rowcount
     print (count, "Record inserted successfully into mobile table")
 except (Exception, psycopg2.Error) as error :
-    if(connection):
+    if(conn):
         print("Failed to insert record into mobile table", error)
 
 
