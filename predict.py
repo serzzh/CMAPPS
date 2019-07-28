@@ -75,4 +75,4 @@ if Predict:
 
 print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
 
-print(z.tail())
+print(z.tail(), dtrain.tail())

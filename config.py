@@ -1,6 +1,6 @@
 class TsConf(object):
     train_fids = [102]
-    test_fids = [202]
+    test_fids = [102]
     cmapss_url = "input/dataset.csv"
     cmapss_n_clusters=6
     ewm = 20
