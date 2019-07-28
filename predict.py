@@ -81,7 +81,7 @@ print(z.tail(), dtrain.tail())
 try:
     postgres_insert_query = """ INSERT INTO RUL (RUL2) VALUES (%f)"""
     for i in range(len(z)):
-        record_to_insert = (z["pred"][i].values)
+        record_to_insert = (z["pred"][i])
         cursor.execute(postgres_insert_query, record_to_insert)
     conn.commit()
     count = cursor.rowcount
