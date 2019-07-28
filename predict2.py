@@ -30,6 +30,49 @@ df.columns = config.columns_old
 
 df = TsDataFrame(df)
 
-print(type(df))
-print(df.iloc[1,])
+train = df[(["FILEID","ENGINEID", "TIMECYCLE"]+config.select_feat+["RUL"])][df.FILEID.isin(config.train_fids)]
+test = df[(["FILEID","ENGINEID", "TIMECYCLE"]+config.select_feat+["RUL"])][df.FILEID.isin(config.test_fids)]
 
+train.tail()
+
+n_eng_train = max(train.ENGINEID)
+n_eng_test = max(test.ENGINEID)
+
+train.target = config.target
+train.groupids = config.groupids
+train.timestamp = config.timestamp
+test.target = config.target
+test.groupids = config.groupids
+test.timestamp = config.timestamp
+
+Train = False
+Predict = not Train
+
+config.sequence_length = 1
+config.batch_size = 1
+config.shift = 1
+config.restore_model = True
+config.save_model = True
+config.random = False
+config.stateful = True
+config.train_fids = [102]
+config.test_fids = [202]
+
+config.display()
+
+m = TsLSTM(config)
+
+if Train:
+    m.train(train, test, config)
+
+
+if Predict:
+    dtrain = train #.loc[train.ENGINEID<9]
+    y_target = dtrain["RUL"]
+    y_pred = m.predict(dtrain, config)
+    z=pd.DataFrame(dict(target=y_target, pred=y_pred)).reset_index()
+    #plt.plot(z[["target", "pred"]])
+
+print (len(df[df.FILEID==102]), len(z))
+
+print(z.tail())
