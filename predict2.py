@@ -28,6 +28,8 @@ config.columns_old = ['FILEID', 'ENGINEID', 'TIMECYCLE',
 
 df.columns = config.columns_old
 
+df = TsDataFrame(df)
+
 print(type(df))
 print(df.iloc[1,])
-print(config.columns_new,'/n', config.columns_old)
+
