@@ -75,9 +75,9 @@ if Predict:
     dtrain["RUL"] = y_pred
     #plt.plot(z[["target", "pred"]])
 
-print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
+#print ("df len %s, predict len %s" % (len(df[df.FILEID==102]), len(z)))
 
-print(z.tail(), dtrain.tail())
+#print(z.tail(), dtrain.tail())
 
 
 #try:
