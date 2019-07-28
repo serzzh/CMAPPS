@@ -80,7 +80,7 @@ try:
     postgres_insert_query = """ INSERT INTO RUL (RUL2) VALUES (%i)"""
     record_to_insert = (z["pred"])
     cursor.execute(postgres_insert_query, record_to_insert)
-    connection.commit()
+    conn.commit()
     count = cursor.rowcount
     print (count, "Record inserted successfully into mobile table")
 except (Exception, psycopg2.Error) as error :
